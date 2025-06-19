@@ -3,6 +3,21 @@
 import serial
 import cbor2
 import crc 
+from enum import Enum
+
+
+class MsgId(Enum):
+        emergency_stop=10
+        emergency_stop_reset=11
+        turn=20
+        straight=21
+        face=22
+        goto_front=23
+        goto_back=24
+        goto_nostop=25
+        max_motor_speed=26
+        normal_speed_acc_mode=30
+        slow_speed_acc_mode=31
 
 
 def _byteInInt(number, i):
