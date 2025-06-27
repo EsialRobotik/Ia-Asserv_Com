@@ -1,30 +1,15 @@
 #!/usr/bin/python3
 
-import serial
 import cbor2
 import crc 
 from enum import Enum
-
-
-class MsgId(Enum):
-        emergency_stop=10
-        emergency_stop_reset=11
-        turn=20
-        straight=21
-        face=22
-        goto_front=23
-        goto_back=24
-        goto_nostop=25
-        max_motor_speed=26
-        normal_speed_acc_mode=30
-        slow_speed_acc_mode=31
 
 
 def _byteInInt(number, i):
     return (number & (0xff << (i * 8))) >> (i * 8)
 
 
-class _SerialCborState_synchroLoopkup:
+class _CborState_synchroLoopkup:
   def __init__(self):
     self.syncword = 0xDEADBEEF
     self.reset()
@@ -45,7 +30,7 @@ class _SerialCborState_synchroLoopkup:
     return (None, None)
 
 
-class _SerialCborState_decode:
+class _CborState_decode:
   def __init__(self):
     self.reset()
     
@@ -77,37 +62,37 @@ class _SerialCborState_decode:
     return (None, None)
         
 
-class SerialCborStateMachine:
+class InputCborStateMachine:
   def __init__(self):
     self.syncword = 0xDEADBEEF
-    self.state = _SerialCborState_synchroLoopkup()
+    self.state = _CborState_synchroLoopkup()
     self.payloads = []
 
-  def push_byte(self, byte):
+  def push_byte(self, byte : bytes):
     (new_state, payload) = self.state.push_byte(byte)
     if new_state == "state_decode" :
-        self.state = _SerialCborState_decode()
+        self.state = _CborState_decode()
     elif new_state == "state_synchroLookup" :
-        self.state = _SerialCborState_synchroLoopkup()
+        self.state = _CborState_synchroLoopkup()
 
     if payload != None :
         self.payloads.append(payload)
 
-  def pop_payload(self):
-    return self.payloads.pop(0)
+  def pop_payload(self) -> dict:
+    payload = self.payloads.pop(0)
+    cbor_msg = cbor2.loads(payload)
+    res = {
+        "X" : cbor_msg[0],
+        "Y" : cbor_msg[1],
+        "Theta" : cbor_msg[2],
+        "cmd_id" : cbor_msg[3],
+        "status" : cbor_msg[4],
+        "pending" : cbor_msg[5],
+        "motor_left" : cbor_msg[6],
+        "motor_right" : cbor_msg[7]
+         }
+    return res;
 
-  def get_nb_payload(self):
+
+  def get_nb_payload(self) -> int:
     return len(self.payloads)
-
-
-
-def sendMsg(serial, msg):
-    syncword = 0xDEADBEEF
-    msg_cbor = cbor2.dumps(msg)
-    msg_cbor_len = len(msg_cbor)
-    calculator = crc.Calculator(crc.Crc32.AUTOSAR)
-    crc_computed = calculator.checksum(msg_cbor)
-    serial.write(syncword.to_bytes(length=4, byteorder='little', signed=False))
-    serial.write(crc_computed.to_bytes(length=4, byteorder='little', signed=False))
-    serial.write(msg_cbor_len.to_bytes(length=4, byteorder='little', signed=False))
-    serial.write(msg_cbor)

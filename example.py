@@ -1,29 +1,34 @@
 import serial
 import cbor2
-from src.asserv_com import *
+from src.asserv_com_input import *
+from src.asserv_com_output import *
+import threading
+import time
 
-ser = serial.Serial('/dev/ttyACM0', 115200)
+# 1st the uart line to read/write
+uart = serial.Serial('/dev/ttyACM0', 115200)
 
-stateMachine = SerialCborStateMachine() 
-
-msg = {"cmd": MsgId.emergency_stop.value ,
-        "X" : 5000.55 ,
-        "Y" : 1000.11 }
-sendMsg(ser, msg)
-
-
-# msg2 = {"cmd": 2 ,
-#         "X" : 5000 ,
-#         "Y" : 1000 }
-# sendMsg(ser, msg2)
+# 2nd, the state machine that decode the input stream
+stateMachine = InputCborStateMachine() 
 
 
+# 3rd, an example of sending a command
+def send_thread(name):
+    time.sleep(2)
+    # cbor = createStraightMessage(666, 1500.0)
+    cbor = createGotoMessage(666, 1500.0, 1500.0)
+    uart.write(cbor)
+
+x = threading.Thread(target=send_thread, args=(1,))
+x.start()
+
+
+# 4th the "pump"
 while True:
-    x = ser.read() 
+    x = uart.read() 
     for val in x :
         stateMachine.push_byte(val)
 
     if stateMachine.get_nb_payload() > 0 :
         payload = stateMachine.pop_payload()
-        cbor_msg = cbor2.loads(payload)
-        print(cbor_msg)
+        print(payload)
