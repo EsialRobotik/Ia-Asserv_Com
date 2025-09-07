@@ -91,7 +91,7 @@ class InputCborStateMachine:
         "motor_left" : cbor_msg[6],
         "motor_right" : cbor_msg[7]
          }
-    return res;
+    return res
 
 
   def get_nb_payload(self) -> int:

@@ -22,10 +22,11 @@ class _MsgId(Enum):
         goto_front=23
         goto_back=24
         goto_nostop=25
+    # Four param messages
+        orbital_turn=30
+
         
         
-
-
 
 def createEmergencyStopMessage() -> bytes:
     msg = {"cmd": _MsgId.emergency_stop.value}
@@ -89,6 +90,14 @@ def createGotoNoStopMessage(cmd_id : int, X : float, Y : float ) -> bytes:
     msg = {"cmd": _MsgId.goto_nostop.value,
     "X" : float(X),
     "Y" : float(Y),
+    "ID": int(cmd_id) }
+    return _formatMsg(msg)  
+
+def createOrbitalTurnMessage(cmd_id : int, angle_in_deg : float, forward : bool, turnToTheRight : bool ) -> bytes:
+    msg = {"cmd": _MsgId.orbital_turn.value,
+    "A" : float(angle_in_deg),
+    "F" : float(1.0) if forward else float(0),
+    "R" : float(1.0) if turnToTheRight else float(0),
     "ID": int(cmd_id) }
     return _formatMsg(msg)  
 
